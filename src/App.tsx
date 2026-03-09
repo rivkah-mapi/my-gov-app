@@ -51,10 +51,10 @@ const App: React.FC = () => {
       geometryType: 1,
       defaultSymbol: {
         url: 'https://www.govmap.gov.il/images/marker.png', // אייקון המרקר
-        width: 24,
-        height: 28
+        width: 20,
+        height: 24
       },
-      clearExisting: true, // מנקה מרקרים קודמים לפני הציור החדש
+      clearExisting: false, // מנקה מרקרים קודמים לפני הציור החדש
       project: true // קריטי! אומר למפה להמיר מקואורדינטות עולמיות לרשת ישראל,
       ,
       data: {
@@ -62,7 +62,6 @@ const App: React.FC = () => {
         headers: servicesWithLocation.map(item => item['כותרת מענה']), // כותרות בבועה
         bubbleUrl: 'https://www.google.co.il'
       },
-      zoomTo: true // זום אוטומטי למיקום המרקרים
     });
   };
 
@@ -99,49 +98,57 @@ const App: React.FC = () => {
   };
 
 
-  const displayRiskLayers = (profile: ProfileType) => {
-    if (!window.govmap) return;
+const displayRiskLayers = (profile: ProfileType) => {
+  if (!window.govmap) return;
 
-    const allWkts: string[] = [];
-    const allSymbols: any[] = [];
-    const allNames: string[] = [];
+  const allWkts: string[] = [];
+  const allSymbols: any[] = [];
+  const allNames: string[] = [];
+  const allTooltips: string[] = []; 
 
-    neighborhoodData.features.forEach((feature: any) => {
-      let count = 0;
-      const props = feature.properties;
+  neighborhoodData.features.forEach((feature: any) => {
+    let count = 0;
+    const props = feature.properties;
 
-      if (profile === 'א') count = props.פרופיל_1_לא_נשוי_נכה || 0;
-      else if (profile === 'ב') count = props.פרופיל_2_לא_נשוי_לא_נכה_מעל_גיל_71_הכנסה_מתחת_ל_2375 || 0;
-      else if (profile === 'ג') count = props.פרופיל_3_לא_נשוי_לא_נכה_מעל_גיל_71_הכנסה_מעל_2375_לא_אקדמאי || 0;
+    if (profile === 'א') count = props.פרופיל_1_לא_נשוי_נכה || 0;
+    else if (profile === 'ב') count = props.פרופיל_2_לא_נשוי_לא_נכה_מעל_גיל_71_הכנסה_מתחת_ל_2375 || 0;
+    else if (profile === 'ג') count = props.פרופיל_3_לא_נשוי_לא_נכה_מעל_גיל_71_הכנסה_מעל_2375_לא_אקדמאי || 0;
 
-      const colorHex = count > 20 ? '#ef4444' : count > 10 ? '#fb923c' : count > 0 ? '#fde047' : '#e5e7eb';
-      const rgba = getRGBA(colorHex, 0.6);
+    const colorHex = count > 20 ? '#ef4444' : count > 10 ? '#fb923c' : count > 0 ? '#fde047' : '#e5e7eb';
+    const rgba = getRGBA(colorHex, 0.6);
 
-      const featureWkts = convertGeoJSONToWKT(feature);
-
-      featureWkts.forEach(wkt => {
-        allWkts.push(wkt);
-        allNames.push(`${props.EZ_NAME}: ${count} קשישים`);
-        allSymbols.push({
-          fillColor: rgba,          
-          outlineColor: [255, 255, 255, 1], // מסגרת לבנה
-          outlineWidth: 1
-        });
+    const featureWkts = convertGeoJSONToWKT(feature);
+    
+    featureWkts.forEach(wkt => {
+      allWkts.push(wkt);
+      allNames.push(props.EZ_NAME); 
+      // המידע שיופיע בתוך הבועה (אפשר להוסיף ירידת שורה עם \n)
+      allTooltips.push(`שכונה: ${props.EZ_NAME}\nקשישים בפרופיל ${profile}: ${count}`);
+      
+      allSymbols.push({
+        fillColor: rgba,
+        outlineColor: [255, 255, 255, 1],
+        outlineWidth: 1
       });
     });
+  });
 
-    window.govmap.displayGeometries({
-      wkts: allWkts,
-      geometryType: 3,
-      symbols: allSymbols,
-      names: allNames,
-      clearExisting: true, 
-      project: false,
-      zoomTo: false 
-    });
-  };
-
-
+  window.govmap.displayGeometries({
+    wkts: allWkts,
+    geometryType: 3,
+    symbols: allSymbols,
+    names: allNames, // כותרות הבועות
+    clearExisting: true,
+    project: false,
+    data: {
+      tooltips: allTooltips, // הטקסט שיופיע בבועה
+      headers: allNames     // כותרת מודגשת בבועה
+    }
+  }).then(() => {
+    // מיד אחרי שהשכונות צוירו - מוסיפים את השירותים מחדש מעל
+    displayServices();
+  });
+};
 
   useEffect(() => {
     if (window.govmap) {
@@ -157,7 +164,7 @@ const App: React.FC = () => {
           token: (import.meta as any).env.VITE_GOVMAP_TOKEN, 
           layers: ["arcgis_hybrid"], // שכבות רקע ריקות כדי לראות את הצבעים שלנו טוב יותר
           showIdentify: true,
-          level: 13,
+          level: 6,
           center: { x: 220000, y: 630000 }, // מרכז ירושלים ברשת ישראל
           layersMode: 1,
           onLoad: () => {
