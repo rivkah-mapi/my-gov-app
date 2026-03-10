@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ProfileSidebar, { ProfileType } from './components/ProfileSidebar';
 import Header from './components/Header';
+import CityStatsSidebar from './components/CitySidebar';
 
-// ייבוא הנתונים
 import servicesData from './data/services.json';
 import neighborhoodData from './data/neighbour.json';
-import CityStatsSidebar from './components/CitySidebar';
 
 declare global {
   interface Window {
@@ -97,59 +96,68 @@ const App: React.FC = () => {
     return [...rgb, opacity]; // מחזיר למשל [239, 68, 68, 0.6]
   };
 
+  const displayRiskLayers = (profile: ProfileType) => {
+    if (!window.govmap) return;
 
-const displayRiskLayers = (profile: ProfileType) => {
-  if (!window.govmap) return;
+    const allWkts: string[] = [];
+    const allSymbols: any[] = [];
+    const allNames: string[] = [];
+    const allGeomTypes: number[] = [];
 
-  const allWkts: string[] = [];
-  const allSymbols: any[] = [];
-  const allNames: string[] = [];
-  const allTooltips: string[] = []; 
+    neighborhoodData.features.forEach((feature: any) => {
+      const props = feature.properties;
+      const totalInArea = props.סה_כ_קשישים_באזור || 1;
+      let count = 0;
 
-  neighborhoodData.features.forEach((feature: any) => {
-    let count = 0;
-    const props = feature.properties;
+      if (profile === 'א') count = props.פרופיל_1_לא_נשוי_נכה || 0;
+      else if (profile === 'ב') count = props.פרופיל_2_לא_נשוי_לא_נכה_מעל_גיל_71_הכנסה_מתחת_ל_2375 || 0;
+      else if (profile === 'ג') count = props.פרופיל_3_לא_נשוי_לא_נכה_מעל_גיל_71_הכנסה_מעל_2375_לא_אקדמאי || 0;
 
-    if (profile === 'א') count = props.פרופיל_1_לא_נשוי_נכה || 0;
-    else if (profile === 'ב') count = props.פרופיל_2_לא_נשוי_לא_נכה_מעל_גיל_71_הכנסה_מתחת_ל_2375 || 0;
-    else if (profile === 'ג') count = props.פרופיל_3_לא_נשוי_לא_נכה_מעל_גיל_71_הכנסה_מעל_2375_לא_אקדמאי || 0;
+      const percentage = (count / totalInArea) * 100;
+      const colorHex = percentage > 15 ? '#ef4444' : percentage > 8 ? '#fb923c' : percentage > 0 ? '#fde047' : '#e5e7eb';
+      const rgba = getRGBA(colorHex, 0.6);
+      const featureWkts = convertGeoJSONToWKT(feature);
 
-    const colorHex = count > 20 ? '#ef4444' : count > 10 ? '#fb923c' : count > 0 ? '#fde047' : '#e5e7eb';
-    const rgba = getRGBA(colorHex, 0.6);
+      const fullInfo = `${props.EZ_NAME}\n----------------\nפרופיל: ${profile}\nכמות: ${count}\nריכוז: ${percentage.toFixed(1)}%`;
 
-    const featureWkts = convertGeoJSONToWKT(feature);
-    
-    featureWkts.forEach(wkt => {
-      allWkts.push(wkt);
-      allNames.push(props.EZ_NAME); 
-      // המידע שיופיע בתוך הבועה (אפשר להוסיף ירידת שורה עם \n)
-      allTooltips.push(`שכונה: ${props.EZ_NAME}\nקשישים בפרופיל ${profile}: ${count}`);
-      
-      allSymbols.push({
-        fillColor: rgba,
-        outlineColor: [255, 255, 255, 1],
-        outlineWidth: 1
+      featureWkts.forEach(wkt => {
+        allWkts.push(wkt);
+        allNames.push(fullInfo);
+        allGeomTypes.push(3);
+        allSymbols.push({
+          fillColor: rgba,
+          outlineColor: [255, 255, 255, 1],
+          outlineWidth: 1
+        });
       });
     });
-  });
 
-  window.govmap.displayGeometries({
-    wkts: allWkts,
-    geometryType: 3,
-    symbols: allSymbols,
-    names: allNames, // כותרות הבועות
-    clearExisting: true,
-    project: false,
-    data: {
-      tooltips: allTooltips, // הטקסט שיופיע בבועה
-      headers: allNames     // כותרת מודגשת בבועה
-    }
-  }).then(() => {
-    // מיד אחרי שהשכונות צוירו - מוסיפים את השירותים מחדש מעל
-    displayServices();
-  });
-};
+    // הוספת מרקרים
+    const servicesWithLocation = servicesData.filter(item => item.wkt);
+    servicesWithLocation.forEach(service => {
+      allWkts.push(service.wkt);
+      allNames.push(`${service['כותרת מענה']}\nכתובת: ${service['כתובת']}`);
+      allGeomTypes.push(1);
+      allSymbols.push({
+        url: 'https://www.govmap.gov.il/images/marker.png',
+        width: 20,
+        height: 24
+      });
+    });
 
+    window.govmap.displayGeometries({
+      wkts: allWkts,
+      geometryTypes: allGeomTypes,
+      symbols: allSymbols,
+      names: allNames,
+      clearExisting: true,
+      project: true,
+      data: {
+        headers: allNames,
+        tooltips: allNames
+      }
+    });
+  };
   useEffect(() => {
     if (window.govmap) {
       displayRiskLayers(selectedProfile);
@@ -161,19 +169,17 @@ const displayRiskLayers = (profile: ProfileType) => {
     const initMap = () => {
       if (window.govmap) {
         window.govmap.createMap('map-container', {
-          token: (import.meta as any).env.VITE_GOVMAP_TOKEN, 
+          token: (import.meta as any).env.VITE_GOVMAP_TOKEN,
           layers: ["arcgis_hybrid"], // שכבות רקע ריקות כדי לראות את הצבעים שלנו טוב יותר
           showIdentify: true,
+          isIdentifyAll: true,
           level: 6,
           center: { x: 220000, y: 630000 }, // מרכז ירושלים ברשת ישראל
           layersMode: 1,
           onLoad: () => {
-            displayServices(); // הצגת שירותים על המפה
             displayRiskLayers(selectedProfile); // הצגת שכבות הסיכון לפי הפרופיל הנבחר}
           }
         });
-
-
       }
     };
 
