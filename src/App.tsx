@@ -15,8 +15,6 @@ declare global {
 const App: React.FC = () => {
   const [selectedProfile, setSelectedProfile] = useState<ProfileType>('א');
 
-  // 1. חישוב נתונים אמיתיים לסיידבר הימני מתוך ה-JSON
-  // משתמשים ב-useMemo כדי לא לחשב מחדש בכל רינדור
   const stats = useMemo(() => {
     const total = neighborhoodData.features.reduce((acc: number, f: any) => acc + (f.properties.סה_כ_קשישים_באזור || 0), 0);
     const atRisk = neighborhoodData.features.reduce((acc: number, f: any) => acc + (f.properties.סה_כ_קשישים_במצבי_סיכון || 0), 0);
@@ -37,34 +35,33 @@ const App: React.FC = () => {
   }, []);
 
 
-  const displayServices = () => {
-    if (!window.govmap) return;
+  // const displayServices = () => {
+  //   if (!window.govmap) return;
 
-    const servicesWithLocation = servicesData.filter(item => item.wkt);
+  //   const servicesWithLocation = servicesData.filter(item => item.wkt);
 
-    //קבלת מידע כמה מרקרים מיהיה
-    console.log(servicesWithLocation);
-    window.govmap.displayGeometries({
-      wkts: servicesWithLocation.map(item => item.wkt),
-      names: servicesWithLocation.map(item => item['כותרת מענה']),
-      geometryType: 1,
-      defaultSymbol: {
-        url: 'https://www.govmap.gov.il/images/marker.png', // אייקון המרקר
-        width: 20,
-        height: 24
-      },
-      clearExisting: false, // מנקה מרקרים קודמים לפני הציור החדש
-      project: true // קריטי! אומר למפה להמיר מקואורדינטות עולמיות לרשת ישראל,
-      ,
-      data: {
-        tooltips: servicesWithLocation.map(item => `שירות: ${item['כותרת מענה']}\nכתובת: ${item['כתובת']}`), // טולטיפים עם מידע נוסף
-        headers: servicesWithLocation.map(item => item['כותרת מענה']), // כותרות בבועה
-        bubbleUrl: 'https://www.google.co.il'
-      },
-    });
-  };
+  //   //קבלת מידע כמה מרקרים מיהיה
+  //   console.log(servicesWithLocation);
+  //   window.govmap.displayGeometries({
+  //     wkts: servicesWithLocation.map(item => item.wkt),
+  //     names: servicesWithLocation.map(item => item['כותרת מענה']),
+  //     geometryType: 1,
+  //     defaultSymbol: {
+  //       url: 'https://www.govmap.gov.il/images/marker.png', // אייקון המרקר
+  //       width: 20,
+  //       height: 24
+  //     },
+  //     clearExisting: false, // מנקה מרקרים קודמים לפני הציור החדש
+  //     project: true // קריטי! אומר למפה להמיר מקואורדינטות עולמיות לרשת ישראל,
+  //     ,
+  //     data: {
+  //       tooltips: servicesWithLocation.map(item => `שירות: ${item['כותרת מענה']}\nכתובת: ${item['כתובת']}`), // טולטיפים עם מידע נוסף
+  //       headers: servicesWithLocation.map(item => item['כותרת מענה']), // כותרות בבועה
+  //       bubbleUrl: 'https://www.google.co.il'
+  //     },
+  //   });
+  // };
 
-  // 1. פונקציית המרה חסינה למבנה MultiPolygon
   const convertGeoJSONToWKT = (feature: any): string[] => {
     const { type, coordinates } = feature.geometry;
 
@@ -93,7 +90,7 @@ const App: React.FC = () => {
       '#e5e7eb': [229, 231, 235], // אפור (אין נתונים)
     };
     const rgb = colors[profileColor] || [200, 200, 200];
-    return [...rgb, opacity]; // מחזיר למשל [239, 68, 68, 0.6]
+    return [...rgb, opacity]; 
   };
 
   const displayRiskLayers = (profile: ProfileType) => {
