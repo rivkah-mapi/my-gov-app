@@ -19,9 +19,7 @@ const CityStatsSidebar: React.FC<CityStatsSidebarProps> = ({ total, atRisk, avg 
         <StatBox title="אחוז ממוצע" value={`${(Number(avg) * 100).toFixed(1)}%`} />
       </div>
       
-      <div className="mt-auto pt-6 border-t border-gray-700 text-gray-400 text-[10px] text-center">
-        נתונים מבוססים על אזורים סטטיסטיים ירושלים
-      </div>
+     
     </aside>
   );
 };
