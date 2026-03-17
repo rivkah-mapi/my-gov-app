@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import NeighborhoodListItem from "./ProfileLine";
 import { PROFILES } from '../constants/profiles';
 import ToggleSwitch from './ToggleSwitch';
+import ServicesTable from './ServicesTable';
 
 const NeighborhoodListView = ({ neighborhoods }) => {
   const [activeTab, setActiveTab] = useState<'risk' | 'solutions'>('risk');
@@ -12,7 +13,7 @@ const NeighborhoodListView = ({ neighborhoods }) => {
   const steps = [0, 200, 400, 600, 800, 1000, 1200, 1400];
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden font-sans shadow-lg rounded-xl border border-gray-100" dir="rtl">
+    <div className="w-full h-full flex flex-col bg-white ${activeTab === 'risk' ? 'overflow-hidden' : 'overflow-auto'} font-sans shadow-lg rounded-xl border border-gray-100" dir="rtl">
       <div className="bg-gray-50 border-b border-gray-100">
         <ToggleSwitch
           currentValue={activeTab}
@@ -77,9 +78,8 @@ const NeighborhoodListView = ({ neighborhoods }) => {
 
           </div>
         ) : (
-          /* טאב מענים - ריק כרגע */
-          <div className="flex-1 flex items-center justify-center text-gray-400 italic text-sm">
-            טאב מענים יהיה זמין בהמשך...
+          <div className="flex-1 overflow-hidden">
+            <ServicesTable />
           </div>
         )}
       </div>
