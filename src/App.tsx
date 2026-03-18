@@ -19,6 +19,13 @@ declare global {
 const App: React.FC = () => {
   const [selectedProfile, setSelectedProfile] = useState<ProfileType>('א');
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  const [tooltipInfo, setTooltipInfo] = useState<any>(null);
+  const tooltipRef = React.useRef(setTooltipInfo);
+  
+  useEffect(() => {
+    tooltipRef.current = setTooltipInfo;
+  }, [setTooltipInfo]);
+
   const stats = useMemo(() => {
     const total = neighborhoodData.features.reduce((acc: number, f: any) => acc + (f.properties[PROFILES.PROFILE_ALL] || 0), 0);
     const atRisk = neighborhoodData.features.reduce((acc: number, f: any) => acc + (f.properties[PROFILES.PROFILE_AT_RISK] || 0), 0);
@@ -28,7 +35,6 @@ const App: React.FC = () => {
       'ג': neighborhoodData.features.reduce((acc: number, f: any) => acc + (f.properties[PROFILES.PROFILE_3] || 0), 0),
     };
     const avg = total > 0 ? (atRisk / total).toFixed(3) : "0";
-
     return {
       total: total.toLocaleString(),
       atRisk: atRisk.toLocaleString(),
@@ -38,33 +44,6 @@ const App: React.FC = () => {
     };
   }, []);
 
-
-  // const displayServices = () => {
-  //   if (!window.govmap) return;
-
-  //   const servicesWithLocation = servicesData.filter(item => item.wkt);
-
-  //   //קבלת מידע כמה מרקרים מיהיה
-  //   console.log(servicesWithLocation);
-  //   window.govmap.displayGeometries({
-  //     wkts: servicesWithLocation.map(item => item.wkt),
-  //     names: servicesWithLocation.map(item => item['כותרת מענה']),
-  //     geometryType: 1,
-  //     defaultSymbol: {
-  //       url: 'https://www.govmap.gov.il/images/marker.png', // אייקון המרקר
-  //       width: 20,
-  //       height: 24
-  //     },
-  //     clearExisting: false, // מנקה מרקרים קודמים לפני הציור החדש
-  //     project: true // קריטי! אומר למפה להמיר מקואורדינטות עולמיות לרשת ישראל,
-  //     ,
-  //     data: {
-  //       tooltips: servicesWithLocation.map(item => `שירות: ${item['כותרת מענה']}\nכתובת: ${item['כתובת']}`), // טולטיפים עם מידע נוסף
-  //       headers: servicesWithLocation.map(item => item['כותרת מענה']), // כותרות בבועה
-  //       bubbleUrl: 'https://www.google.co.il'
-  //     },
-  //   });
-  // };
 
   const convertGeoJSONToWKT = (feature: any): string[] => {
     const { type, coordinates } = feature.geometry;
@@ -104,6 +83,7 @@ const App: React.FC = () => {
     const allSymbols: any[] = [];
     const allNames: string[] = [];
     const allGeomTypes: number[] = [];
+    const tooltipData: any[] = []
 
     neighborhoodData.features.forEach((feature: any) => {
       const props = feature.properties;
@@ -122,6 +102,13 @@ const App: React.FC = () => {
       const fullInfo = `${props.EZ_NAME}\n----------------\nפרופיל: ${profile}\nכמות: ${count}\nריכוז: ${percentage.toFixed(1)}%`;
 
       featureWkts.forEach(wkt => {
+        tooltipData.push({
+          title: props.EZ_NAME,
+          all: totalInArea,
+          profile1: props[PROFILES.PROFILE_1] || 0,
+          profile2: props[PROFILES.PROFILE_2] || 0,
+          profile3: props[PROFILES.PROFILE_3] || 0,
+        })
         allWkts.push(wkt);
         allNames.push(fullInfo);
         allGeomTypes.push(3);
@@ -153,11 +140,21 @@ const App: React.FC = () => {
       names: allNames,
       clearExisting: true,
       project: true,
-      data: {
-        headers: allNames,
-        tooltips: allNames
+      showBubble: false,
+      geomData: tooltipData,
+
+    }).then((point: any) => {
+      const info = point.data[0]?.geomData;
+      if (info) {
+        tooltipRef.current({
+          title: info.title,
+          all: info.all,
+          profile1: info.profile1,
+          profile2: info.profile2,
+          profile3: info.profile3,
+        });
       }
-    });
+    })
   };
   useEffect(() => {
     if (window.govmap) {
@@ -171,9 +168,7 @@ const App: React.FC = () => {
       if (window.govmap) {
         window.govmap.createMap('map-container', {
           token: (import.meta as any).env.VITE_GOVMAP_TOKEN,
-          layers: ["arcgis_hybrid"],
-          showIdentify: true,
-          isIdentifyAll: true,
+          layers: [],
           level: 6,
           center: { x: 220000, y: 630000 },
           layersMode: 1,
@@ -219,6 +214,8 @@ const App: React.FC = () => {
           viewMode={viewMode}
           neighborhoodData={neighborhoodData}
           onViewModeChange={setViewMode}
+          tooltipInfo={tooltipInfo}
+          closeTooltip={() => setTooltipInfo(null)}
         />
         <ProfileSidebar
           selectedProfile={selectedProfile}
@@ -226,6 +223,7 @@ const App: React.FC = () => {
           profileCount={stats.profileCounts[selectedProfile]} // מעבירים את המספר של הפרופיל הנבחר
           totalAtRisk={stats.atRiskNumber} // מעבירים את סך כל הקשישים בסיכון לחישוב אחוז
         />
+
       </div>
     </div>
   );
