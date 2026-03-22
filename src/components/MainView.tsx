@@ -17,7 +17,7 @@ const MainView: React.FC<MainViewProps> = ({ viewMode, neighborhoodData, onViewM
       <div className={`w-full h-full ${viewMode === 'map' ? 'block' : 'hidden'}`}>
         <div id="map-container" className="w-full h-full"></div>
       </div>
-      <NeighborhoodTooltip info={tooltipInfo} onClose={closeTooltip} />
+      {/* <NeighborhoodTooltip info={tooltipInfo} onClose={closeTooltip} /> */}
       {viewMode === 'list' && (
         <NeighborhoodListView neighborhoods={neighborhoodData} />
       )}

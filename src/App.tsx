@@ -9,6 +9,7 @@ import NeighborhoodListView from './components/NeighborhoodListView';
 
 import { PROFILES } from './constants/profiles';
 import MainView from './components/MainView';
+import ServiceFilter from './components/ServicesFilter';
 
 declare global {
   interface Window {
@@ -17,11 +18,12 @@ declare global {
 }
 
 const App: React.FC = () => {
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<ProfileType>('א');
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [tooltipInfo, setTooltipInfo] = useState<any>(null);
   const tooltipRef = React.useRef(setTooltipInfo);
-  
+
   useEffect(() => {
     tooltipRef.current = setTooltipInfo;
   }, [setTooltipInfo]);
@@ -44,12 +46,9 @@ const App: React.FC = () => {
     };
   }, []);
 
-
   const convertGeoJSONToWKT = (feature: any): string[] => {
     const { type, coordinates } = feature.geometry;
-
     if (type === 'MultiPolygon') {
-      // MultiPolygon: [[[[x,y], [x,y]]]]
       return coordinates.map((polygon: any) => {
         const rings = polygon.map((ring: any) =>
           ring.map((coord: any) => `${coord[0]} ${coord[1]}`).join(', ')
@@ -57,8 +56,6 @@ const App: React.FC = () => {
         return `POLYGON((${rings}))`;
       });
     }
-
-    // Polygon רגיל: [[[x,y], [x,y]]]
     const rings = coordinates.map((ring: any) =>
       ring.map((coord: any) => `${coord[0]} ${coord[1]}`).join(', ')
     ).join('), (');
@@ -67,10 +64,10 @@ const App: React.FC = () => {
 
   const getRGBA = (profileColor: string, opacity: number = 0.6): number[] => {
     const colors: Record<string, number[]> = {
-      '#ef4444': [239, 68, 68],  // אדום (סיכון גבוה)
-      '#fb923c': [251, 146, 60],  // כתום (סיכון בינוני)
-      '#fde047': [253, 224, 71],  // צהוב (סיכון נמוך)
-      '#e5e7eb': [229, 231, 235], // אפור (אין נתונים)
+      '#ef4444': [239, 68, 68],
+      '#fb923c': [251, 146, 60],
+      '#fde047': [253, 224, 71],
+      '#e5e7eb': [229, 231, 235],
     };
     const rgb = colors[profileColor] || [200, 200, 200];
     return [...rgb, opacity];
@@ -81,9 +78,9 @@ const App: React.FC = () => {
 
     const allWkts: string[] = [];
     const allSymbols: any[] = [];
-    const allNames: string[] = [];
+    const allNames: any[] = [];
     const allGeomTypes: number[] = [];
-    const tooltipData: any[] = []
+    const tooltipData: any[] = [];
 
     neighborhoodData.features.forEach((feature: any) => {
       const props = feature.properties;
@@ -108,7 +105,7 @@ const App: React.FC = () => {
           profile1: props[PROFILES.PROFILE_1] || 0,
           profile2: props[PROFILES.PROFILE_2] || 0,
           profile3: props[PROFILES.PROFILE_3] || 0,
-        })
+        });
         allWkts.push(wkt);
         allNames.push(fullInfo);
         allGeomTypes.push(3);
@@ -120,11 +117,37 @@ const App: React.FC = () => {
       });
     });
 
-    // הוספת מרקרים
-    const servicesWithLocation = servicesData.filter(item => item.wkt);
-    servicesWithLocation.forEach(service => {
+   const filteredServices = servicesData.filter(service => {
+  const hasWkt = !!service.wkt;
+
+  const matchesCategory =
+    selectedCategories.length === 0 ||
+    selectedCategories.some(cat => {
+      return Object.values(service).some(val =>
+        typeof val === "string" &&
+        val
+          .split(",")
+          .map(v => v.trim())
+          .includes(cat)
+      );
+    });
+
+  return hasWkt && matchesCategory;
+});
+
+    filteredServices.forEach(service => {
       allWkts.push(service.wkt);
-      allNames.push(`${service['כותרת מענה']}\nכתובת: ${service['כתובת']}`);
+      allNames.push({
+        title: service['כותרת מענה'],
+        service: service['סוג מענה'] || 'שירות קהילתי',
+        address: [
+          service['עיר'],
+          service['שכונה'],
+          service['כתובת'],
+          service['רחוב']
+        ].filter(value => value && value !== 'null' && value !== '').join(', ')
+      }); 
+
       allGeomTypes.push(1);
       allSymbols.push({
         url: 'https://www.govmap.gov.il/images/marker.png',
@@ -142,27 +165,30 @@ const App: React.FC = () => {
       project: true,
       showBubble: false,
       geomData: tooltipData,
-
     }).then((point: any) => {
       const info = point.data[0]?.geomData;
-      if (info) {
+      const isService = !point.data[0].geomData?.title;
+
+      if (info || isService) {
         tooltipRef.current({
-          title: info.title,
-          all: info.all,
-          profile1: info.profile1,
-          profile2: info.profile2,
-          profile3: info.profile3,
+          title: info?.title || point.data[0].name.title,
+          all: info?.all,
+          profile1: info?.profile1,
+          profile2: info?.profile2,
+          profile3: info?.profile3,
+          isService,
+          service: point.data[0].name
         });
       }
-    })
+    });
   };
+
   useEffect(() => {
     if (window.govmap) {
       displayRiskLayers(selectedProfile);
     }
-  }, [selectedProfile]);
+  }, [selectedProfile, selectedCategories]);
 
-  // אתחול המפה
   useEffect(() => {
     const initMap = () => {
       if (window.govmap) {
@@ -187,29 +213,18 @@ const App: React.FC = () => {
     return () => window.removeEventListener('load', initMap);
   }, []);
 
-  const renderOptionBtn = (
-    { label, mode }: { label: string; mode: 'map' | 'list' }
-  ) => {
-    return (
-      <button
-        onClick={() => setViewMode(mode)}
-        className={`flex-1 py-1.5 text-sm font-bold z-10 transition-colors cursor-pointer ${viewMode === mode ? 'text-blue-600' : 'text-gray-500'
-          }`}
-      >
-        {label}
-      </button>
-    )
-  }
-
   return (
     <div className="flex flex-col h-screen w-full bg-gray-100 overflow-hidden" dir="rtl">
       <Header />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         <CityStatsSidebar
           total={stats.total}
           atRisk={stats.atRisk}
           avg={stats.avg}
+           tooltipInfo={tooltipInfo}
+          closeTooltip={() => setTooltipInfo(null)}
         />
+        
         <MainView
           viewMode={viewMode}
           neighborhoodData={neighborhoodData}
@@ -217,18 +232,24 @@ const App: React.FC = () => {
           tooltipInfo={tooltipInfo}
           closeTooltip={() => setTooltipInfo(null)}
         />
+
         <ProfileSidebar
           selectedProfile={selectedProfile}
           onProfileChange={(p) => setSelectedProfile(p)}
-          profileCount={stats.profileCounts[selectedProfile]} // מעבירים את המספר של הפרופיל הנבחר
-          totalAtRisk={stats.atRiskNumber} // מעבירים את סך כל הקשישים בסיכון לחישוב אחוז
+          profileCount={stats.profileCounts[selectedProfile]}
+          totalAtRisk={stats.atRiskNumber}
         />
 
+        <div className="absolute top-4 right-4 z-40">
+          <ServiceFilter
+            services={servicesData}
+            selectedCategories={selectedCategories}
+            onClear={(selected) => setSelectedCategories(selected)}
+          />
+        </div>
       </div>
     </div>
   );
 }
-
-
 
 export default App;

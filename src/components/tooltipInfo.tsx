@@ -1,11 +1,13 @@
 import React from 'react';
 
 interface TooltipData {
-  title: string;
-  all: number | string;
-  profile1: number;
-  profile2: number;
-  profile3: number;
+  title?: string;
+  all?: number | string;
+  profile1?: number;
+  profile2?: number;
+  profile3?: number;
+  isService?: boolean; 
+  service:any;
 }
 
 interface NeighborhoodTooltipProps {
@@ -16,46 +18,56 @@ interface NeighborhoodTooltipProps {
 const NeighborhoodTooltip: React.FC<NeighborhoodTooltipProps> = ({ info, onClose }) => {
   if (!info) return null;
 
-  // הגדרת הפרופילים בצורה גנרית
-  const profileConfigs = [
-    { label: "פרופיל א'", value: info.profile1, bgColor: "bg-red-100", textColor: "text-red-700", hoverColor: "group-hover:text-red-600" },
-    { label: "פרופיל ב'", value: info.profile2, bgColor: "bg-orange-100", textColor: "text-orange-700", hoverColor: "group-hover:text-orange-600" },
-    { label: "פרופיל ג'", value: info.profile3, bgColor: "bg-yellow-100", textColor: "text-yellow-700", hoverColor: "group-hover:text-yellow-600" },
-  ];
+  const isService = info.isService;
 
   return (
-    <div className="absolute top-6 right-6 bg-white rounded-xl shadow-2xl max-w-sm w-72 text-right overflow-hidden z-50 border border-gray-100 animate-in fade-in slide-in-from-bottom-4 duration-300" dir="rtl">
+    <div className="absolute bottom-6 right-6 left-6 bg-white rounded-xl shadow-2xl w-[85%] text-right overflow-hidden z-50 border border-gray-100 animate-in fade-in slide-in-from-bottom-4 duration-300" dir="rtl">
       
-      <div className="bg-blue-900 text-white px-4 py-3 flex flex-row justify-between items-center">
-        <h3 className="font-bold text-lg leading-tight tracking-wide truncate ml-4">
-          {info.title}
+      <div className={`${isService ? 'bg-emerald-700' : 'bg-blue-900'} text-white px-4 py-3 flex flex-row justify-between items-center`}>
+        <h3 className="font-bold text-lg leading-tight truncate ml-4" title={isService?info.service.title: info.title || "פרטי מידע"}>
+          {isService?info.service.title: info.title || "פרטי מידע"}
         </h3>
         <button 
           onClick={onClose}
-          className="text-white/70 hover:text-white transition-colors text-2xl leading-none focus:outline-none p-1 shrink-0"
+          className="text-white/70 hover:text-white transition-colors text-2xl leading-none p-1 shrink-0"
         >
           ×
         </button>
       </div>
 
-      <div className="p-4 space-y-4">
-        <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
-          <span className="text-gray-600 font-medium">סה"כ קשישים באזור</span>
-          <span className="text-gray-900 font-bold text-xl">{info.all}</span>
-        </div>
-
-        <div className="space-y-3">
-          {profileConfigs.map((profile, index) => (
-            <div key={index} className="flex justify-between items-center group px-1">
-              <span className={`text-gray-700 font-medium transition-colors ${profile.hoverColor}`}>
-                {profile.label}
-              </span>
-              <div className={`${profile.bgColor} ${profile.textColor} min-w-[42px] text-center px-3 py-1 rounded-full text-sm font-bold shadow-sm`}>
-                {profile.value}
-              </div>
+      <div className="p-4">
+        {isService ? (
+          <div className="space-y-4">
+            <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+              <p className="text-emerald-900 font-bold text-md mb-1">כתובת:</p>
+              <p className="text-emerald-800">{info.service.address || "לא צוינה כתובת"}</p>
             </div>
-          ))}
-        </div>       
+            
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+              <span className="text-gray-600 font-medium">סה"כ קשישים באזור</span>
+              <span className="text-gray-900 font-bold text-xl">{info.all}</span>
+            </div>
+
+            <div className="space-y-3">
+              {[
+                { label: "פרופיל א'", value: info.profile1, bg: "bg-red-100", txt: "text-red-700" },
+                { label: "פרופיל ב'", value: info.profile2, bg: "bg-orange-100", txt: "text-orange-700" },
+                { label: "פרופיל ג'", value: info.profile3, bg: "bg-yellow-100", txt: "text-yellow-700" }
+              ].map((p, i) => (
+                <div key={i} className="flex justify-between items-center px-1">
+                  <span className="text-gray-700 font-medium">{p.label}</span>
+                  <div className={`${p.bg} ${p.txt} min-w-[42px] text-center px-3 py-1 rounded-full text-sm font-bold shadow-sm`}>
+                    {p.value ?? 0}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
       </div>
     </div>
   );
