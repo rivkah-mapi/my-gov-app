@@ -29,18 +29,33 @@ const SecondaryText: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     </span>
 );
 
-const ServicesTable: React.FC = () => {
+const ServicesTable: React.FC<{ selectedCategories: string[] }> = ({ selectedCategories }) => {
     const subTabOptions = ["הכל", "ממשלתי", "עירוני", "עמותה", "פרטי"];
     const [activeSubTab, setActiveSubTab] = useState("הכל");
 
     const filteredData = useMemo(() => {
-        const data = servicesData as Service[];
+         const data = servicesData.filter(service => {
+         
+           const matchesCategory =
+             selectedCategories.length === 0 ||
+             selectedCategories.some(cat => {
+               return Object.values(service).some(val =>
+                 typeof val === "string" &&
+                 val
+                   .split(",")
+                   .map(v => v.trim())
+                   .includes(cat)
+               );
+             });
+         
+           return  matchesCategory;
+         });
         if (activeSubTab === "הכל") return data;
         return data.filter(item =>
             item["מימון"]?.includes(activeSubTab) ||
             item["סוג נותן שירות.1"]?.includes(activeSubTab)
         );
-    }, [activeSubTab]);
+    }, [activeSubTab, selectedCategories]);
 
     const columns = useMemo<ColumnDef<Service>[]>(() => [
         {

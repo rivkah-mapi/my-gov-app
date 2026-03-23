@@ -6,7 +6,7 @@ import { PROFILES } from '../constants/profiles';
 import ToggleSwitch from './ToggleSwitch';
 import ServicesTable from './ServicesTable';
 
-const NeighborhoodListView = ({ neighborhoods }) => {
+const NeighborhoodListView = ({ neighborhoods, selectedCategories, isInSidebar = false }) => {
   const [activeTab, setActiveTab] = useState<'risk' | 'solutions'>('risk');
 
   const scaleMax = 1400;
@@ -44,6 +44,7 @@ const NeighborhoodListView = ({ neighborhoods }) => {
                     name={p.EZ_NAME}
                     stats={stats}
                     scaleMax={scaleMax}
+                    isInSidebar={isInSidebar}
                   />
                 );
               })}
@@ -79,7 +80,7 @@ const NeighborhoodListView = ({ neighborhoods }) => {
           </div>
         ) : (
           <div className="flex-1 overflow-hidden">
-            <ServicesTable />
+            <ServicesTable selectedCategories={selectedCategories} />
           </div>
         )}
       </div>

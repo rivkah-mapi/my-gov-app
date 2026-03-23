@@ -1,4 +1,4 @@
-const NeighborhoodListItem = ({ name, stats, scaleMax }) => {
+const NeighborhoodListItem = ({ name, stats, scaleMax, isInSidebar }) => {
   const riskTotal = stats.a + stats.b + stats.g;
   const nonRiskCount = Math.max(0, stats.total_all - riskTotal);
   
@@ -19,7 +19,7 @@ const NeighborhoodListItem = ({ name, stats, scaleMax }) => {
 
       <div className="flex-1 relative h-5 flex items-center">
         <div 
-          className="h-2.5 flex rounded-sm overflow-hidden shadow-sm transition-all duration-1000 ease-out"
+          className={`h-2.5 flex rounded-sm overflow-hidden shadow-sm transition-all duration-1000 ease-out ${isInSidebar ? 'w-full' : ''}`}
           style={{ width: `${fullBarWidth}%` }}
         >
           <div 
