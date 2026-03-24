@@ -4,15 +4,16 @@ import React, { useState } from 'react';
 import NeighborhoodListItem from "./ProfileLine";
 import { PROFILES } from '../constants/profiles';
 import ToggleSwitch from './ToggleSwitch';
+import ServicesTable from './ServicesTable';
 
-const NeighborhoodListView = ({ neighborhoods }) => {
+const NeighborhoodListView = ({ neighborhoods, selectedCategories, isInSidebar = false }) => {
   const [activeTab, setActiveTab] = useState<'risk' | 'solutions'>('risk');
 
   const scaleMax = 1400;
   const steps = [0, 200, 400, 600, 800, 1000, 1200, 1400];
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden font-sans shadow-lg rounded-xl border border-gray-100" dir="rtl">
+    <div className="w-full h-full flex flex-col bg-white ${activeTab === 'risk' ? 'overflow-hidden' : 'overflow-auto'} shadow-lg rounded-xl border border-gray-100" dir="rtl">
       <div className="bg-gray-50 border-b border-gray-100">
         <ToggleSwitch
           currentValue={activeTab}
@@ -26,7 +27,7 @@ const NeighborhoodListView = ({ neighborhoods }) => {
       </div>
       <div className="flex-1 flex flex-col overflow-hidden text-right">
         {activeTab === 'risk' ? (
-          <div className="w-full h-full flex flex-col bg-white overflow-hidden font-sans shadow-lg border border-gray-100" dir="rtl">
+          <div className="w-full h-full flex flex-col bg-white overflow-hidden shadow-lg border border-gray-100">
             <div className="flex-1 overflow-y-auto px-4 pt-4 custom-scrollbar">
               {neighborhoods.features.map((feature, index) => {
                 const p = feature.properties;
@@ -43,6 +44,7 @@ const NeighborhoodListView = ({ neighborhoods }) => {
                     name={p.EZ_NAME}
                     stats={stats}
                     scaleMax={scaleMax}
+                    isInSidebar={isInSidebar}
                   />
                 );
               })}
@@ -77,9 +79,8 @@ const NeighborhoodListView = ({ neighborhoods }) => {
 
           </div>
         ) : (
-          /* טאב מענים - ריק כרגע */
-          <div className="flex-1 flex items-center justify-center text-gray-400 italic text-sm">
-            טאב מענים יהיה זמין בהמשך...
+          <div className="flex-1 overflow-hidden">
+            <ServicesTable selectedCategories={selectedCategories} />
           </div>
         )}
       </div>

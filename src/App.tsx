@@ -5,10 +5,11 @@ import CityStatsSidebar from './components/CitySidebar';
 
 import servicesData from './data/services.json';
 import neighborhoodData from './data/neighbour.json';
-import NeighborhoodListView from './components/NeighborhoodListView';
 
 import { PROFILES } from './constants/profiles';
 import MainView from './components/MainView';
+import ServiceFilter from './components/ServicesFilter';
+import GovmapAddressSearch from './components/Search';
 
 declare global {
   interface Window {
@@ -17,8 +18,20 @@ declare global {
 }
 
 const App: React.FC = () => {
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<ProfileType>('א');
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  const [tooltipInfo, setTooltipInfo] = useState<any>(null);
+  const [zoomLevel, setZoomLevel] = useState<number>(6);
+
+  const lastZoomRef = React.useRef<number | null>(null);
+  const tooltipRef = React.useRef(setTooltipInfo);
+
+  useEffect(() => {
+    tooltipRef.current = setTooltipInfo;
+  }, [setTooltipInfo]);
+
+
   const stats = useMemo(() => {
     const total = neighborhoodData.features.reduce((acc: number, f: any) => acc + (f.properties[PROFILES.PROFILE_ALL] || 0), 0);
     const atRisk = neighborhoodData.features.reduce((acc: number, f: any) => acc + (f.properties[PROFILES.PROFILE_AT_RISK] || 0), 0);
@@ -28,49 +41,20 @@ const App: React.FC = () => {
       'ג': neighborhoodData.features.reduce((acc: number, f: any) => acc + (f.properties[PROFILES.PROFILE_3] || 0), 0),
     };
     const avg = total > 0 ? (atRisk / total).toFixed(3) : "0";
-
     return {
       total: total.toLocaleString(),
       atRisk: atRisk.toLocaleString(),
       atRiskNumber: atRisk,
-      avg: avg,
+      avg,
       profileCounts
     };
   }, []);
 
 
-  // const displayServices = () => {
-  //   if (!window.govmap) return;
-
-  //   const servicesWithLocation = servicesData.filter(item => item.wkt);
-
-  //   //קבלת מידע כמה מרקרים מיהיה
-  //   console.log(servicesWithLocation);
-  //   window.govmap.displayGeometries({
-  //     wkts: servicesWithLocation.map(item => item.wkt),
-  //     names: servicesWithLocation.map(item => item['כותרת מענה']),
-  //     geometryType: 1,
-  //     defaultSymbol: {
-  //       url: 'https://www.govmap.gov.il/images/marker.png', // אייקון המרקר
-  //       width: 20,
-  //       height: 24
-  //     },
-  //     clearExisting: false, // מנקה מרקרים קודמים לפני הציור החדש
-  //     project: true // קריטי! אומר למפה להמיר מקואורדינטות עולמיות לרשת ישראל,
-  //     ,
-  //     data: {
-  //       tooltips: servicesWithLocation.map(item => `שירות: ${item['כותרת מענה']}\nכתובת: ${item['כתובת']}`), // טולטיפים עם מידע נוסף
-  //       headers: servicesWithLocation.map(item => item['כותרת מענה']), // כותרות בבועה
-  //       bubbleUrl: 'https://www.google.co.il'
-  //     },
-  //   });
-  // };
-
   const convertGeoJSONToWKT = (feature: any): string[] => {
     const { type, coordinates } = feature.geometry;
 
     if (type === 'MultiPolygon') {
-      // MultiPolygon: [[[[x,y], [x,y]]]]
       return coordinates.map((polygon: any) => {
         const rings = polygon.map((ring: any) =>
           ring.map((coord: any) => `${coord[0]} ${coord[1]}`).join(', ')
@@ -79,31 +63,34 @@ const App: React.FC = () => {
       });
     }
 
-    // Polygon רגיל: [[[x,y], [x,y]]]
     const rings = coordinates.map((ring: any) =>
       ring.map((coord: any) => `${coord[0]} ${coord[1]}`).join(', ')
     ).join('), (');
+
     return [`POLYGON((${rings}))`];
   };
 
-  const getRGBA = (profileColor: string, opacity: number = 0.6): number[] => {
-    const colors: Record<string, number[]> = {
-      '#ef4444': [239, 68, 68],  // אדום (סיכון גבוה)
-      '#fb923c': [251, 146, 60],  // כתום (סיכון בינוני)
-      '#fde047': [253, 224, 71],  // צהוב (סיכון נמוך)
-      '#e5e7eb': [229, 231, 235], // אפור (אין נתונים)
+  const getRGBA = (hex: string, opacity = 0.6): number[] => {
+    const map: Record<string, number[]> = {
+      '#ef4444': [239, 68, 68],
+      '#fb923c': [251, 146, 60],
+      '#fde047': [253, 224, 71],
+      '#e5e7eb': [229, 231, 235],
     };
-    const rgb = colors[profileColor] || [200, 200, 200];
-    return [...rgb, opacity];
+    return [...(map[hex] || [200, 200, 200]), opacity];
   };
+
 
   const displayRiskLayers = (profile: ProfileType) => {
     if (!window.govmap) return;
 
+    window.govmap.setVisibleLayers([], ['layer_228678'])
+
     const allWkts: string[] = [];
     const allSymbols: any[] = [];
-    const allNames: string[] = [];
+    const allNames: any[] = [];
     const allGeomTypes: number[] = [];
+    const tooltipData: any[] = [];
 
     neighborhoodData.features.forEach((feature: any) => {
       const props = feature.properties;
@@ -122,6 +109,13 @@ const App: React.FC = () => {
       const fullInfo = `${props.EZ_NAME}\n----------------\nפרופיל: ${profile}\nכמות: ${count}\nריכוז: ${percentage.toFixed(1)}%`;
 
       featureWkts.forEach(wkt => {
+        tooltipData.push({
+          title: props.EZ_NAME,
+          all: totalInArea,
+          profile1: props[PROFILES.PROFILE_1] || 0,
+          profile2: props[PROFILES.PROFILE_2] || 0,
+          profile3: props[PROFILES.PROFILE_3] || 0,
+        });
         allWkts.push(wkt);
         allNames.push(fullInfo);
         allGeomTypes.push(3);
@@ -133,11 +127,38 @@ const App: React.FC = () => {
       });
     });
 
-    // הוספת מרקרים
-    const servicesWithLocation = servicesData.filter(item => item.wkt);
-    servicesWithLocation.forEach(service => {
+    const filteredServices = servicesData.filter(service => {
+      const hasWkt = !!service.wkt;
+
+      const matchesCategory =
+        selectedCategories.length === 0 ||
+        selectedCategories.some(cat => {
+          return Object.values(service).some(val =>
+            typeof val === "string" &&
+            val
+              .split(",")
+              .map(v => v.trim())
+              .includes(cat)
+          );
+        });
+
+      return hasWkt && matchesCategory;
+    });
+
+    filteredServices.forEach(service => {
       allWkts.push(service.wkt);
-      allNames.push(`${service['כותרת מענה']}\nכתובת: ${service['כתובת']}`);
+      allNames.push({
+        title: service['כותרת מענה'],
+        service: service['סוג מענה'] || 'שירות קהילתי',
+        link: service['לינק'] || '',
+        address: [
+          service['עיר'],
+          service['שכונה'],
+          service['כתובת'],
+          service['רחוב'],
+        ].filter(value => value && value !== 'null' && value !== '').join(', ')
+      });
+
       allGeomTypes.push(1);
       allSymbols.push({
         url: 'https://www.govmap.gov.il/images/marker.png',
@@ -153,35 +174,105 @@ const App: React.FC = () => {
       names: allNames,
       clearExisting: true,
       project: true,
-      data: {
-        headers: allNames,
-        tooltips: allNames
+      showBubble: false,
+      geomData: tooltipData,
+    }).then((point: any) => {
+      const info = point.data[0]?.geomData;
+      const isService = !point.data[0].geomData?.title;
+
+      if (info || isService) {
+        tooltipRef.current({
+          title: info?.title || point.data[0].name.title,
+          all: info?.all,
+          profile1: info?.profile1,
+          profile2: info?.profile2,
+          profile3: info?.profile3,
+          isService,
+          service: point.data[0].name
+        });
       }
     });
   };
-  useEffect(() => {
-    if (window.govmap) {
-      displayRiskLayers(selectedProfile);
-    }
-  }, [selectedProfile]);
 
-  // אתחול המפה
   useEffect(() => {
-    const initMap = () => {
-      if (window.govmap) {
-        window.govmap.createMap('map-container', {
-          token: (import.meta as any).env.VITE_GOVMAP_TOKEN,
-          layers: ["arcgis_hybrid"],
-          showIdentify: true,
-          isIdentifyAll: true,
-          level: 6,
-          center: { x: 220000, y: 630000 },
-          layersMode: 1,
-          onLoad: () => {
-            displayRiskLayers(selectedProfile);
-          }
+    const t = setTimeout(() => {
+      if (!window.govmap) return;
+
+      if (zoomLevel < 5) {
+        showCityLayer();
+      } else {
+        displayRiskLayers(selectedProfile);
+      }
+    }, 150);
+
+    return () => clearTimeout(t);
+  }, [zoomLevel, selectedProfile, selectedCategories]);
+
+
+  const showCityLayer = () => {
+    if (!window.govmap) return;
+
+    window.govmap.displayGeometries({
+      wkts: [],
+      geometryTypes: [],
+      symbols: [],
+      names: [],
+      clearExisting: true
+    });
+
+    window.govmap.setVisibleLayers(['layer_228678'], [])
+    var params = {
+      continous: false,
+      drawType: window.govmap.drawType.Point,
+      filterLayer: false,
+      isZoomToExtent: false,
+      layers: ['layer_228678'],
+      returnFields: {
+        'layer_228678': ['setl_name']
+      },
+      selectOnMap: true,
+      whereClause: {
+        'layer_228678': "1=1"
+      },
+    }
+    window.govmap.selectFeaturesOnMap(params).then(function (response) {
+      if(response?.[0]?.[0]?.setl_name === 'ירושלים') {
+        tooltipRef.current({
+          isCity: true,
+          title: response[0][0].setl_name,
         });
       }
+    });
+    // window.govmap.onEvent(window.govmap.events.CLICK).progress((point) => {console.log("Clicked point data-----:", point);});
+
+
+  };
+
+  useEffect(() => {
+    const initMap = () => {
+      if (!window.govmap) return;
+
+      window.govmap.createMap('map-container', {
+        token: (import.meta as any).env.VITE_GOVMAP_TOKEN,
+        level: 5,
+        center: { x: 220000, y: 630000 },
+        layersMode: 1,
+        identifyOnClick: false,
+        onLoad: () => {
+          showCityLayer();
+          window.govmap
+            .onEvent(window.govmap.events.EXTENT_CHANGE)
+            .progress((e: any) => {
+              const newZoom = e?.lod?.level;
+              if (newZoom === undefined) return;
+
+              if (lastZoomRef.current !== newZoom) {
+                lastZoomRef.current = newZoom;
+                setZoomLevel(newZoom);
+              }
+            });
+        }
+      });
     };
 
     if (window.govmap) {
@@ -189,48 +280,52 @@ const App: React.FC = () => {
     } else {
       window.addEventListener('load', initMap);
     }
+
     return () => window.removeEventListener('load', initMap);
   }, []);
-
-  const renderOptionBtn = (
-    { label, mode }: { label: string; mode: 'map' | 'list' }
-  ) => {
-    return (
-      <button
-        onClick={() => setViewMode(mode)}
-        className={`flex-1 py-1.5 text-sm font-bold z-10 transition-colors cursor-pointer ${viewMode === mode ? 'text-blue-600' : 'text-gray-500'
-          }`}
-      >
-        {label}
-      </button>
-    )
-  }
 
   return (
     <div className="flex flex-col h-screen w-full bg-gray-100 overflow-hidden" dir="rtl">
       <Header />
-      <div className="flex flex-1 overflow-hidden">
+
+      <div className="flex flex-1 overflow-hidden relative">
+
         <CityStatsSidebar
           total={stats.total}
           atRisk={stats.atRisk}
           avg={stats.avg}
+          tooltipInfo={tooltipInfo}
+          closeTooltip={() => setTooltipInfo(null)}
         />
+
         <MainView
           viewMode={viewMode}
           neighborhoodData={neighborhoodData}
           onViewModeChange={setViewMode}
+          tooltipInfo={tooltipInfo}
+          closeTooltip={() => setTooltipInfo(null)}
+          selectedCategories={selectedCategories}
         />
+
         <ProfileSidebar
           selectedProfile={selectedProfile}
           onProfileChange={(p) => setSelectedProfile(p)}
-          profileCount={stats.profileCounts[selectedProfile]} // מעבירים את המספר של הפרופיל הנבחר
-          totalAtRisk={stats.atRiskNumber} // מעבירים את סך כל הקשישים בסיכון לחישוב אחוז
+          profileCount={stats.profileCounts[selectedProfile]}
+          totalAtRisk={stats.atRiskNumber}
         />
+
+        <div className="absolute top-4 right-4 z-40">
+          <ServiceFilter
+            services={servicesData}
+            selectedCategories={selectedCategories}
+            onClear={(s) => setSelectedCategories(s)}
+          />
+        </div>
+
       </div>
+      {window.govmap && <GovmapAddressSearch map={window.gomap} />}
     </div>
   );
-}
-
-
+};
 
 export default App;

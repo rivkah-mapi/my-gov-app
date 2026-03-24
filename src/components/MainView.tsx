@@ -6,19 +6,22 @@ interface MainViewProps {
   viewMode: 'map' | 'list';
   neighborhoodData: any;
   onViewModeChange: (mode: 'map' | 'list') => void;
+  tooltipInfo: any;
+  closeTooltip: () => void;
+  selectedCategories: string[];
 }
 
-const MainView: React.FC<MainViewProps> = ({ viewMode, neighborhoodData, onViewModeChange }) => {
+const MainView: React.FC<MainViewProps> = ({ viewMode, neighborhoodData, onViewModeChange, tooltipInfo, closeTooltip, selectedCategories }) => {
   return (
     <main className="flex-1 relative">
       <div className={`w-full h-full ${viewMode === 'map' ? 'block' : 'hidden'}`}>
         <div id="map-container" className="w-full h-full"></div>
       </div>
-
+      {/* <NeighborhoodTooltip info={tooltipInfo} onClose={closeTooltip} /> */}
       {viewMode === 'list' && (
-        <NeighborhoodListView neighborhoods={neighborhoodData} />
+        <NeighborhoodListView neighborhoods={neighborhoodData} selectedCategories={selectedCategories} />
       )}
-      <div className="absolute z-20 bottom-6 left-6 flex items-center gap-4">
+      <div className={`absolute z-20 bottom-3 ${viewMode === 'list' ? 'left-6' : 'left-1/2 transform -translate-x-1/2'} flex items-center gap-4`}>
 
         <ToggleSwitch
           currentValue={viewMode}
