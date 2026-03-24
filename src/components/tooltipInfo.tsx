@@ -13,6 +13,7 @@ interface TooltipData {
   service?: {
     title?: string;
     address?: string;
+    link?: string;
   };
   isCity?: boolean;
 }
@@ -40,12 +41,12 @@ const NeighborhoodTooltip: React.FC<NeighborhoodTooltipProps> = ({ info, onClose
           <div
             className={`${isService ? 'bg-emerald-700' : 'bg-blue-900'} text-white px-4 py-3 flex flex-row justify-between items-center`}
           >
-            <h3
-              className="font-bold text-lg leading-tight truncate ml-4"
+            <div
+              className="font-bold text-md leading-tight ml-4"
               title={isService ? info.service?.title : info.title || 'פרטי מידע'}
             >
               {isService ? info.service?.title : info.title || 'פרטי מידע'}
-            </h3>
+            </div>
             <button
               onClick={onClose}
               className="text-white/70 hover:text-white transition-colors text-2xl leading-none p-1 shrink-0"
@@ -58,9 +59,19 @@ const NeighborhoodTooltip: React.FC<NeighborhoodTooltipProps> = ({ info, onClose
           <div className="p-2">
             {isService ? (
               <div className="space-y-2">
-                <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
-                  <p className="text-emerald-900 font-bold text-md mb-1">כתובת:</p>
+                <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100 text-sm">
+                  <p className="text-emerald-900 font-bold mb-1">כתובת:</p>
                   <p className="text-emerald-800">{info.service?.address || 'לא צוינה כתובת'}</p>
+                  <p className="text-emerald-900 font-bold  mt-1">
+                    <a
+                      href={info.service?.link || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-700 hover:text-emerald-900 underline"
+                    >
+                      למידע נוסף
+                    </a>
+                  </p>
                 </div>
               </div>
             ) : (

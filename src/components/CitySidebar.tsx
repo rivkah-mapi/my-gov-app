@@ -14,7 +14,7 @@ interface CityStatsSidebarProps {
 
 const CityStatsSidebar: React.FC<CityStatsSidebarProps> = ({ total, atRisk, avg, tooltipInfo, closeTooltip }) => {
   return (
-    <aside className="relative w-80 bg-[#323232] text-white p-6 flex flex-col shadow-xl z-10">
+    <aside className="relative w-80 bg-gray-50 text-black p-6 flex flex-col shadow-xl z-10">
       <h1 className="text-2xl font-bold text-center my-5 tracking-tight pt-8">ירושלים</h1>
       <div className="space-y-2">
         <StatBox title="סה''כ קשישים" value={total} />

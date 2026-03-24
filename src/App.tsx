@@ -9,6 +9,7 @@ import neighborhoodData from './data/neighbour.json';
 import { PROFILES } from './constants/profiles';
 import MainView from './components/MainView';
 import ServiceFilter from './components/ServicesFilter';
+import GovmapAddressSearch from './components/Search';
 
 declare global {
   interface Window {
@@ -149,11 +150,12 @@ const App: React.FC = () => {
       allNames.push({
         title: service['כותרת מענה'],
         service: service['סוג מענה'] || 'שירות קהילתי',
+        link: service['לינק'] || '',
         address: [
           service['עיר'],
           service['שכונה'],
           service['כתובת'],
-          service['רחוב']
+          service['רחוב'],
         ].filter(value => value && value !== 'null' && value !== '').join(', ')
       });
 
@@ -234,11 +236,12 @@ const App: React.FC = () => {
       },
     }
     window.govmap.selectFeaturesOnMap(params).then(function (response) {
-      console.log('---------', response);
-      tooltipRef.current({
-        isCity: true,
-        title: 'response[0].setl_name',
-      });
+      if(response?.[0]?.[0]?.setl_name === 'ירושלים') {
+        tooltipRef.current({
+          isCity: true,
+          title: response[0][0].setl_name,
+        });
+      }
     });
     // window.govmap.onEvent(window.govmap.events.CLICK).progress((point) => {console.log("Clicked point data-----:", point);});
 
@@ -320,6 +323,7 @@ const App: React.FC = () => {
         </div>
 
       </div>
+      {window.govmap && <GovmapAddressSearch map={window.gomap} />}
     </div>
   );
 };

@@ -13,7 +13,7 @@ const NeighborhoodListView = ({ neighborhoods, selectedCategories, isInSidebar =
   const steps = [0, 200, 400, 600, 800, 1000, 1200, 1400];
 
   return (
-    <div className="w-full h-full flex flex-col bg-white ${activeTab === 'risk' ? 'overflow-hidden' : 'overflow-auto'} font-sans shadow-lg rounded-xl border border-gray-100" dir="rtl">
+    <div className="w-full h-full flex flex-col bg-white ${activeTab === 'risk' ? 'overflow-hidden' : 'overflow-auto'} shadow-lg rounded-xl border border-gray-100" dir="rtl">
       <div className="bg-gray-50 border-b border-gray-100">
         <ToggleSwitch
           currentValue={activeTab}
@@ -27,7 +27,7 @@ const NeighborhoodListView = ({ neighborhoods, selectedCategories, isInSidebar =
       </div>
       <div className="flex-1 flex flex-col overflow-hidden text-right">
         {activeTab === 'risk' ? (
-          <div className="w-full h-full flex flex-col bg-white overflow-hidden font-sans shadow-lg border border-gray-100" dir="rtl">
+          <div className="w-full h-full flex flex-col bg-white overflow-hidden shadow-lg border border-gray-100">
             <div className="flex-1 overflow-y-auto px-4 pt-4 custom-scrollbar">
               {neighborhoods.features.map((feature, index) => {
                 const p = feature.properties;

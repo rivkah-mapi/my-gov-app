@@ -89,7 +89,7 @@ const ServiceFilter: React.FC<Props> = ({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M6 12h12M10 20h4" />
                 </svg>
 
-                <span className="text-sm font-semibold">סינון מענים</span>
+                {/* <span className="text-sm font-semibold">סינון מענים</span> */}
 
                 {selectedCategories.length > 0 && (
                     <span className="absolute -top-2 -left-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">

@@ -21,7 +21,7 @@ const MainView: React.FC<MainViewProps> = ({ viewMode, neighborhoodData, onViewM
       {viewMode === 'list' && (
         <NeighborhoodListView neighborhoods={neighborhoodData} selectedCategories={selectedCategories} />
       )}
-      <div className="absolute z-20 bottom-6 left-6 flex items-center gap-4">
+      <div className={`absolute z-20 bottom-3 ${viewMode === 'list' ? 'left-6' : 'left-1/2 transform -translate-x-1/2'} flex items-center gap-4`}>
 
         <ToggleSwitch
           currentValue={viewMode}
